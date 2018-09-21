@@ -5,6 +5,16 @@
 #include <GL/glut.h>
 #include <stdio.h>
 
+//prototypes
+void myglutInit(int argc, char ** argv);
+void myInit(void);
+void display(void);
+void drawBox(int x, int y);
+void eraseBox(int x, int y); 
+void clearBox();
+void mouse(int button, int state, int x, int y);
+void keyboard(unsigned char key, int x, int y);
+
 // These are defined in a global scope
 
 GLubyte red, green, blue;
@@ -103,10 +113,9 @@ void drawBox(int x, int y)
 	p[1] = WINDOW_MAX_Y - y;
 
 	glBegin(GL_POINTS);
-	glVertex2fv(p);
+		glVertex2fv(p);
 	glEnd();
 	glFlush();
-	return true;
 
 }
 
@@ -138,12 +147,11 @@ void clearBox()
 void mouse(int button, int state, int x, int y)
 {
 
-	ArrayList<point> points = new ArrayList
-		if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-		{
-			printf("%d   %d\n", x, y);
-			drawbox(x, y);
-		}
+	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+	{
+		printf("%d   %d\n", x, y);
+		drawBox(x, y);
+	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
