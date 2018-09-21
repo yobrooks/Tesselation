@@ -9,6 +9,17 @@
 
 using namespace std; 
 
+//my structs
+struct Point{
+	GLfloat x, y;
+};
+
+struct Polygon{
+	int numPoints;
+	vector <Point> polygonPoints;
+};
+
+
 //prototypes
 void myglutInit(int argc, char ** argv);
 void myInit(void);
@@ -18,9 +29,10 @@ void eraseBox(int x, int y);
 void clearBox();
 void mouse(int button, int state, int x, int y);
 void keyboard(unsigned char key, int x, int y);
-void drawLines(int x, int y);
-// These are defined in a global scope
+void drawLines(int x, int y, Polygon poly);
 
+
+// These are defined in a global scope
 GLubyte red, green, blue;
 int COLORS_DEFINED;
 // Specity the values to place and size the window on the screen
@@ -37,11 +49,9 @@ const float WORLD_COORDINATE_MAX_X = 400.0;
 const float WORLD_COORDINATE_MIN_Y = 0.0;
 const float WORLD_COORDINATE_MAX_Y = 400.0;
 
-//2d vector to hold the points
-typedef GLfloat point [2];
-vector< vector<point> > polygonPoints;
-int numPoints=0;
 
+//declarations continued
+Polygon myPolygon;
 
 
 void myglutInit(int argc, char** argv)
@@ -80,7 +90,7 @@ void display(void)
 
 	/* define a point data type */
 
-//	typedef GLfloat point[2];
+	typedef GLfloat point[2];
 
 	point p; /* A point in 2-D space */
 
@@ -110,48 +120,54 @@ void display(void)
 
 }
 
-void drawLines(int x, int y)
+void drawLines(int x, int y, Polygon poly)
 {
-vector<int> newPoint;
-numPoints++;
-if(numPoints<1)
-       {
+
+	poly.numPoints = poly.numPoints+1;
+	cout << "Num Points: " << poly.numPoints << endl;
+	if(poly.numPoints<1)
+       	{	
 		cout << "No Points" << endl;
-               	newPoint.push_back(x);
-		newPoint.push_back(y);
-		polygonPoints.push_back(newPoint);	
+               	poly.polygonPoints[0].x=x;
+		poly.polygonPoints[0].y=y;
         }
-else if(numPoints>1)
-{
+	else if(poly.numPoints>1)
+	{
 
 		glColor3f(0.0f, 1.0f, 0.0f);
-               	newPoint.push_back(x);
-		newPoint.push_back(y);
-		polygonPoints.push_back(newPoint);
+               	poly.polygonPoints[poly.numPoints].x=x;
+		poly.polygonPoints[poly.numPoints].y=y;
 
-                cout << "Num Points " << numPoints << " Else Statement" << endl;
-		 
+               // cout << "Num Points " << poly.numPoints << " Else Statement" << endl;
+		
+		typedef GLfloat point [2];
+		point p1, p2; 
+		p1[0]=x;
+		p1[1]=y;
+
+		p2[0]=poly.polygonPoints[poly.numPoints-1].x;
+		p2[1]=poly.polygonPoints[poly.numPoints-1].y;
+
                	glBegin(GL_LINES);
-                        glVertex2i(polygonPoints[numPoints-1][0], polygonPoints[numPoints-1][1]);
-                        glVertex2i(newPoint[0], newPoint[1]);
+                        glVertex2fv(p1);
+                        glVertex2fv(p2);
                 glEnd();
                 glFlush();
 
                 cout << "Line drawn" << endl;
-}
+	}		
 
-else
-{
-	cout << "1 Point" << endl;
-	newPoint.push_back(x);
-	newPoint.push_back(y);
-	polygonPoints.push_back(newPoint);
-}
+	else
+	{
+		cout << "1 Point" << endl;
+		poly.polygonPoints[poly.numPoints].x=x;
+		poly.polygonPoints[poly.numPoints].y=y;
+	}
 }
 //draw the points
 void drawBox(int x, int y)
 {
-//	typedef GLfloat point[2];
+	typedef GLfloat point[2];
 	point p;
 
 	glColor3ub(red, green, blue);
@@ -164,13 +180,13 @@ void drawBox(int x, int y)
 	glEnd();
 	glFlush();			
 	
-//	drawLines(x,y);
+	//drawLines(p);
 }
 
 
 void eraseBox(int x, int y)
 {
-//	typedef GLfloat point[2];
+	typedef GLfloat point[2];
 	point p;
 
 	glColor3f(1.0, 1.0, 1.0);
@@ -195,11 +211,13 @@ void clearBox()
 void mouse(int button, int state, int x, int y)
 {
 
+	cout << "Num Points: " << myPolygon.numPoints << endl;
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
-		//printf("%d   %d\n", x, y);
+		printf("%d   %d\n", x, y);
 		drawBox(x, y);
-		drawLines(x, y);
+		cout << "Draw Line " << endl;
+		drawLines(x, y, myPolygon);
 		//cout << "Num Points " << numPoints << endl;
 	}
 
@@ -225,7 +243,6 @@ void keyboard(unsigned char key, int x, int y)
 
 int main(int argc, char** argv)
 {
-
 	myglutInit(argc, argv); /* Set up Window */
 	myInit(); /* set attributes */
 
