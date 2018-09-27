@@ -14,6 +14,10 @@ struct Point{
 	double x, y;
 };
 
+struct LineSeg{
+	Point p1, p2;
+};
+
 
 // These are defined in a global scope
 GLubyte red, green, blue;
@@ -35,6 +39,7 @@ const float WORLD_COORDINATE_MAX_Y = 400.0;
 
 //declarations continued
 vector<Point> polygonPoints;
+vector<LineSeg> lineSegments;
 
 void myglutInit(int argc, char** argv)
 {
@@ -66,41 +71,52 @@ void myInit(void)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-
-void display(void)
+void addPointsLines(Point point, LineSeg line)
 {
+	 		glBegin(GL_LINES);
+                        glColor3f(0.0f, 1.0f, 0.0f);
+                                glVertex2d(line.p1.x, line.p1.y);
+                                glVertex2d(point.x, point.y);
+                        glEnd();
+                        glFlush();
 
-	/* define a point data type */
-
-	typedef GLfloat point[2];
-
-	point p; /* A point in 2-D space */
-
-	glClear(GL_COLOR_BUFFER_BIT);  /*clear the window */
-
-	if (!COLORS_DEFINED) {
-		red = 255;
-		green = 0;
-		blue = 0;
-	}
-
-	glColor3ub(red, green, blue);
-
-	/* define point */
-
-	p[0] = 100;
-	p[1] = 100;
-
-	/* plot new point */
-
-/*	glBegin(GL_POINTS);
-	glVertex2fv(p);
-	glEnd();
-
-*/
-//	glFlush(); /* clear buffers */
-
+                        lineSegments.push_back(line);
+                        polygonPoints.push_back(point);
 }
+ 
+
+template <class T>
+bool lineSegIntersect(Point newPoint, int i)
+{
+        bool intersect;
+        Point p1=lineSegments[i].p1;
+        Point p2= lineSegments[i].p2;
+        Point p3=lineSegments[lineSegments.size()-1].p2;
+        Point p4=newPoint;
+
+        T denom = ((p2.x - p1.x)*(-(p4.y - p3.y))) - ((-(p4.x - p3.x)*(p2.y - p1.y)));
+	cout << "denominator value" << denom << endl;
+        if(denom==0)
+        {
+                intersect=false;
+        }
+        else{
+                T scalarA = ((p3.x - p1.x)*(-(p4.y - p3.y))) - ((-(p4.x - p3.x)*(p3.y - p1.y)));
+                T scalarB = ((p2.x - p1.x)*(p3.y - p1.y)) - ((p3.x - p1.x)*(p2.y - p1.y));
+                scalarA = scalarA / denom;
+                scalarB = scalarB / denom;
+
+                 if (scalarA > 0 && scalarA < 1 && scalarB>0 && scalarB < 1)
+                {
+                        intersect=true;
+                }
+                else
+                        intersect=false;
+        }
+	cout << "line seg intersect function value: " << intersect << endl;
+        return intersect;
+}
+
 
 template <class T> 
 void drawLines(T x, T y)
@@ -109,27 +125,48 @@ void drawLines(T x, T y)
 	x=(double) x;
 	y= (double) y;
 	Point newPoint;
+	LineSeg newLine;
 	newPoint.x=x;
 	newPoint.y=y;
 	int prevPosition=0;
-	
+	bool intersect;
+
+//not drawing first point
 	if(polygonPoints.size()<1)
        	{	
                	polygonPoints.push_back(newPoint);
+		glBegin(GL_POINTS);
+                	glVertex2d(newPoint.x, newPoint.y);
+      		  glEnd();
+        	  glFlush();
         }
 	else if(polygonPoints.size()>=1)
 	{
-
 		prevPosition=polygonPoints.size()-1;
-		
-               	glBegin(GL_LINES);
-		glColor3f(0.0f, 1.0f, 0.0f);
-                        glVertex2d(polygonPoints[prevPosition].x, polygonPoints[prevPosition].y);
-			glVertex2d(newPoint.x, newPoint.y);
-                glEnd();
-                glFlush();
+		newLine.p1=polygonPoints[prevPosition];
+		newLine.p2=newPoint;		
+	
+		if(lineSegments.size() > 2)
+		{
+			for(int i=0; i<lineSegments.size(); i++)
+			{
+				if(lineSegIntersect<int>(newPoint, i)==true){
+					intersect=true;
+					break;
+				}
+				else{
+					intersect=false;
+				}
+			}
+			if(intersect==false)
+			{
+				addPointsLines(newPoint, newLine);			
+			}
+		}	
+		else{
 
-		polygonPoints.push_back(newPoint);
+			addPointsLines(newPoint, newLine);	
+		}
 	}
 			
 }
@@ -145,6 +182,7 @@ void closePolygon()
 	glEnd();	
 	glFlush();
 }
+
 //draw the points
 void drawBox(int x, int y)
 {
@@ -155,7 +193,8 @@ void drawBox(int x, int y)
 
 	p[0] = x;
 	p[1] = WINDOW_MAX_Y - y;
-
+	
+	drawLines(x, WINDOW_MAX_Y-y);
 	glBegin(GL_POINTS);
 		glVertex2fv(p);
 	glEnd();
@@ -186,23 +225,26 @@ void clearBox()
 	glFlush();
 }
 
+void tesselatePolygon()
+{
+
+}
+
 
 void mouse(int button, int state, int x, int y)
 {
 
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
-		printf("Point Accepted: %d   %d\n", x, y);
 		drawBox(x, y);
-		//cout << "Draw Line " << endl;
-		drawLines(x,WINDOW_MAX_Y-y);	
+		//drawLines(x,WINDOW_MAX_Y-y);	
+		printf("Point Accepted: %d   %d\n", x, y);
 	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		printf("%d   %d\n", x, y);
 		closePolygon();
-		//eraseBox(x, y);
 	}
 
 	if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
@@ -215,7 +257,17 @@ void mouse(int button, int state, int x, int y)
 
 void keyboard(unsigned char key, int x, int y)
 {
-	if (key == 'q' || key == 'Q') exit(0);
+/*	switch(tolower(key)){
+
+		case q: exit(0);
+		case t: tesselate();
+			break;
+		case i: returnToInitial();
+			break;
+		case f: filledPolygon();
+			break;
+		
+	}*/
 }
 
 
@@ -228,7 +280,7 @@ int main(int argc, char** argv)
 
 	glutMouseFunc(mouse);  /* Define Mouse Handler */
 	glutKeyboardFunc(keyboard); /* Define Keyboard Handler */
-	glutDisplayFunc(display); /* Display callback invoked when window opened */
+	//glutDisplayFunc(display); /* Display callback invoked when window opened */
 	glutMainLoop(); /* enter event loop */
 }
 
