@@ -9,11 +9,14 @@
 
 using namespace std; 
 
-//my structs
+//my struct declarations
+
+//struct for a point, holds double values for the x and y coordinates
 struct Point{
 	double x, y;
 };
 
+//struct for a line segment, holds 2 points that come from the Point struct declaration above
 struct LineSeg{
 	Point p1, p2;
 };
@@ -37,9 +40,10 @@ const float WORLD_COORDINATE_MIN_Y = 0.0;
 const float WORLD_COORDINATE_MAX_Y = 400.0;
 
 
-//declarations continued
-vector<Point> polygonPoints;
-vector<LineSeg> lineSegments;
+//vector declarations
+vector<Point> polygonPoints; //vector of points to hold the points in the polygon
+vector<LineSeg> lineSegments; //vector of line segments to hold the line segments that make up the polygon
+
 
 void myglutInit(int argc, char** argv)
 {
@@ -49,6 +53,7 @@ void myglutInit(int argc, char** argv)
 	glutInitWindowPosition(WINDOW_POSITION_X, WINDOW_POSITION_Y); /* place window top left on display */
 	glutCreateWindow("Mouse and Keyboard Interaction"); /* window title */
 }
+
 
 
 void myInit(void)
@@ -71,40 +76,44 @@ void myInit(void)
 	glMatrixMode(GL_MODELVIEW);
 }
 
+
 void addPointsLines(Point point, LineSeg line)
 {
-	 		glBegin(GL_LINES);
-                        glColor3f(0.0f, 1.0f, 0.0f);
-                                glVertex2d(line.p1.x, line.p1.y);
+	 	//	glBegin(GL_LINES); //draw the actual lines on the screen
+                        glColor3f(1.0f, 0.0f, 0.0f); //set the color of the outline lines to red
+                       	glBegin(GL_LINES);
+			         glVertex2d(line.p1.x, line.p1.y);
                                 glVertex2d(point.x, point.y);
                         glEnd();
                         glFlush();
 
-                        lineSegments.push_back(line);
-                        polygonPoints.push_back(point);
+                        lineSegments.push_back(line); //add the line segment drawn to the vector of LS
+                        polygonPoints.push_back(point); //add the new point to the vector of points 
 }
  
 
 template <class T>
 bool lineSegIntersect(Point newPoint, int i)
 {
-        bool intersect;
+       //declarations
+	bool intersect;
         Point p1=lineSegments[i].p1;
         Point p2= lineSegments[i].p2;
         Point p3=lineSegments[lineSegments.size()-1].p2;
         Point p4=newPoint;
 
-        T denom = ((p2.x - p1.x)*(-(p4.y - p3.y))) - ((-(p4.x - p3.x)*(p2.y - p1.y)));
-	cout << "denominator value" << denom << endl;
+        T denom = ((p2.x - p1.x)*((p4.y - p3.y))) - ((p2.y - p1.y)*(p4.x - p3.x));
         if(denom==0)
         {
                 intersect=false;
         }
         else{
-                T scalarA = ((p3.x - p1.x)*(-(p4.y - p3.y))) - ((-(p4.x - p3.x)*(p3.y - p1.y)));
-                T scalarB = ((p2.x - p1.x)*(p3.y - p1.y)) - ((p3.x - p1.x)*(p2.y - p1.y));
+                T scalarA = ((p1.y - p3.y)*(p4.x - p3.x)) - ((p1.x - p3.x)*(p4.y - p3.y));
+                T scalarB = ((p1.y - p3.y)*(p2.x - p1.x)) - ((p1.x - p3.x)*(p2.y - p1.y));
                 scalarA = scalarA / denom;
-                scalarB = scalarB / denom;
+		scalarB=scalarB/denom;
+		cout << "scalar A" << scalarA << endl;
+		cout << "scarlar B" << scalarB << endl;
 
                  if (scalarA > 0 && scalarA < 1 && scalarB>0 && scalarB < 1)
                 {
@@ -129,16 +138,17 @@ void drawLines(T x, T y)
 	newPoint.x=x;
 	newPoint.y=y;
 	int prevPosition=0;
-	bool intersect;
+	bool intersect=false;
 
-//not drawing first point
+
 	if(polygonPoints.size()<1)
        	{	
                	polygonPoints.push_back(newPoint);
+		glColor3f(1.0f, 0.0f, 0.0f);
 		glBegin(GL_POINTS);
                 	glVertex2d(newPoint.x, newPoint.y);
-      		  glEnd();
-        	  glFlush();
+      		 glEnd();
+        	 glFlush();
         }
 	else if(polygonPoints.size()>=1)
 	{
@@ -146,22 +156,21 @@ void drawLines(T x, T y)
 		newLine.p1=polygonPoints[prevPosition];
 		newLine.p2=newPoint;		
 	
-		if(lineSegments.size() > 2)
+		if(polygonPoints.size()>=3) //changed from lineSegment.size()
 		{
+			//endless loop
 			for(int i=0; i<lineSegments.size(); i++)
 			{
-				if(lineSegIntersect<int>(newPoint, i)==true){
+				if(lineSegIntersect<double>(newPoint, i)==true) //changed to double
+				{	
 					intersect=true;
 					break;
 				}
-				else{
-					intersect=false;
-				}
-			}
 			if(intersect==false)
 			{
 				addPointsLines(newPoint, newLine);			
 			}
+		}
 		}	
 		else{
 
@@ -171,12 +180,12 @@ void drawLines(T x, T y)
 			
 }
 
-
+//function to connect the last point drawn to the first point drawn
 void closePolygon()
 {
 	int lastPosition=polygonPoints.size()-1;
 	glBegin(GL_LINES);
-	glColor3f(0.0f, 1.0f, 0.0f);
+	glColor3f(1.0f, 0.0f, 0.0f);
 		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
 		glVertex2d(polygonPoints[lastPosition].x, polygonPoints[lastPosition].y);
 	glEnd();	
@@ -194,11 +203,12 @@ void drawBox(int x, int y)
 	p[0] = x;
 	p[1] = WINDOW_MAX_Y - y;
 	
-	drawLines(x, WINDOW_MAX_Y-y);
+	//drawLines(x, WINDOW_MAX_Y-y);
 	glBegin(GL_POINTS);
 		glVertex2fv(p);
 	glEnd();
-	glFlush();			
+	glFlush();	
+	drawLines(x, WINDOW_MAX_Y-y);		
 	
 }
 
