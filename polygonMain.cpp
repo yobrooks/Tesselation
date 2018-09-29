@@ -79,7 +79,7 @@ void myInit(void)
 }
 
  
-
+//equation for scalar A and B and denominator from : http://www.faqs.org/faqs/graphics/algorithms-faq/
 template <class T>
 bool lineSegIntersect(Point newPoint, int i)
 {
@@ -98,10 +98,9 @@ bool lineSegIntersect(Point newPoint, int i)
         else{
                 T scalarA = ((p1.y - p3.y)*(p4.x - p3.x)) - ((p1.x - p3.x)*(p4.y - p3.y));
                 T scalarB = ((p1.y - p3.y)*(p2.x - p1.x)) - ((p1.x - p3.x)*(p2.y - p1.y));
-                scalarA = scalarA / denom;
-		scalarB=scalarB/denom;
-		cout << "scalar A" << scalarA << endl;
-		cout << "scarlar B" << scalarB << endl;
+          
+	        scalarA = scalarA / denom;
+		scalarB = scalarB / denom;
 
                  if (scalarA > 0 && scalarA < 1 && scalarB>0 && scalarB < 1)
                 {
@@ -110,7 +109,6 @@ bool lineSegIntersect(Point newPoint, int i)
                 else
                         intersect=false;
         }
-	cout << "line seg intersect function value: " << intersect << endl;
         return intersect;
 }
 
@@ -174,21 +172,48 @@ void processDraw(T x, T y)
 		polygonPoints.push_back(newPoint);
 	}
 	
+	//if there are more than one point
 	else if(polygonPoints.size() >= 1)
 	{
+		//declarations
 		prevPosition = polygonPoints.size() -1;
 		prevPoint.x = polygonPoints[prevPosition].x;
 		prevPoint.y = polygonPoints[prevPosition].y;
 		newLine.p1 = prevPoint;
 		newLine.p2 = newPoint;
 		
-		//if(lineSegments.size() < 1)
-		//{
+		//if there a no line segments drawn yet, draw the point 
+		//and then the line and add the points to the vectors
+		if(lineSegments.size() < 1)
+		{
 			drawPoint(newPoint);
 			drawLine(newPoint, prevPoint);
 			polygonPoints.push_back(newPoint);
 			lineSegments.push_back(newLine);
-		//}
+		}
+		
+		else if(lineSegments.size() >= 1)
+		{
+			//check for intersection using a for loop
+			//if ends up true, break the loop
+			//if it's false at the end of the loop, draw and add points
+			for(int i=0; i < lineSegments.size(); i++)
+			{
+				//check
+				intersect = lineSegIntersect<double>(newPoint, i);
+				cout << "Intersect? " << intersect << endl;
+				if(intersect == true)
+					break;
+			}
+			
+			if(intersect==false)
+			{
+				drawPoint(newPoint);
+				drawLine(newPoint, prevPoint);
+				polygonPoints.push_back(newPoint);
+				lineSegments.push_back(newLine);
+			}
+		}
 	}
 }
 
