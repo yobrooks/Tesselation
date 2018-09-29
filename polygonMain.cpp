@@ -39,7 +39,9 @@ const float WORLD_COORDINATE_MAX_X = 400.0;
 const float WORLD_COORDINATE_MIN_Y = 0.0;
 const float WORLD_COORDINATE_MAX_Y = 400.0;
 
-
+//boolean to keep track of when the user is done drawing points
+//when set to true they cannot draw anymore
+bool doneDrawing=false;
 //vector declarations
 vector<Point> polygonPoints; //vector of points to hold the points in the polygon
 vector<LineSeg> lineSegments; //vector of line segments to hold the line segments that make up the polygon
@@ -76,20 +78,6 @@ void myInit(void)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-
-void addPointsLines(Point point, LineSeg line)
-{
-	 	//	glBegin(GL_LINES); //draw the actual lines on the screen
-                        glColor3f(1.0f, 0.0f, 0.0f); //set the color of the outline lines to red
-                       	glBegin(GL_LINES);
-			         glVertex2d(line.p1.x, line.p1.y);
-                                glVertex2d(point.x, point.y);
-                        glEnd();
-                        glFlush();
-
-                        lineSegments.push_back(line); //add the line segment drawn to the vector of LS
-                        polygonPoints.push_back(point); //add the new point to the vector of points 
-}
  
 
 template <class T>
@@ -126,59 +114,7 @@ bool lineSegIntersect(Point newPoint, int i)
         return intersect;
 }
 
-
-template <class T> 
-void drawLines(T x, T y)
-{
-
-	x=(double) x;
-	y= (double) y;
-	Point newPoint;
-	LineSeg newLine;
-	newPoint.x=x;
-	newPoint.y=y;
-	int prevPosition=0;
-	bool intersect=false;
-
-
-	if(polygonPoints.size()<1)
-       	{	
-               	polygonPoints.push_back(newPoint);
-		glColor3f(1.0f, 0.0f, 0.0f);
-		glBegin(GL_POINTS);
-                	glVertex2d(newPoint.x, newPoint.y);
-      		 glEnd();
-        	 glFlush();
-        }
-	else if(polygonPoints.size()>=1)
-	{
-		prevPosition=polygonPoints.size()-1;
-		newLine.p1=polygonPoints[prevPosition];
-		newLine.p2=newPoint;		
-	
-		if(polygonPoints.size()>=3) //changed from lineSegment.size()
-		{
-			//endless loop
-			for(int i=0; i<lineSegments.size(); i++)
-			{
-				if(lineSegIntersect<double>(newPoint, i)==true) //changed to double
-				{	
-					intersect=true;
-					break;
-				}
-			if(intersect==false)
-			{
-				addPointsLines(newPoint, newLine);			
-			}
-		}
-		}	
-		else{
-
-			addPointsLines(newPoint, newLine);	
-		}
-	}
-			
-}
+  
 
 //function to connect the last point drawn to the first point drawn
 void closePolygon()
@@ -193,41 +129,68 @@ void closePolygon()
 }
 
 //draw the points
-void drawBox(int x, int y)
+void drawPoint(Point p)
 {
-	typedef GLfloat point[2];
-	point p;
-
-	glColor3ub(red, green, blue);
-
-	p[0] = x;
-	p[1] = WINDOW_MAX_Y - y;
 	
-	//drawLines(x, WINDOW_MAX_Y-y);
+	glColor3f(1.0f, 0.0f, 0.0f);
 	glBegin(GL_POINTS);
-		glVertex2fv(p);
+		glVertex2d(p.x, p.y);
 	glEnd();
-	glFlush();	
-	drawLines(x, WINDOW_MAX_Y-y);		
+	glFlush();		
 	
 }
 
-void eraseBox(int x, int y)
+//draw the lines
+void drawLine(Point p, Point prevp)
 {
-	typedef GLfloat point[2];
-	point p;
-
-	glColor3f(1.0, 1.0, 1.0);
-
-	p[0] = x;
-	p[1] = WINDOW_MAX_Y - y;
-
-	glBegin(GL_POINTS);
-	glVertex2fv(p);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glBegin(GL_LINES);
+		glVertex2d(prevp.x, prevp.y);
+		glVertex2d(p.x, p.y);
 	glEnd();
 	glFlush();
 }
 
+//function to process what is being drawn
+//adds the points and lines and checks for intersections
+template <class T>
+void processDraw(T x, T y)
+{
+	//declarations
+	x = (double) x;
+	y = (double) y;
+	Point newPoint;
+	Point prevPoint;
+	LineSeg newLine;
+	newPoint.x = x;
+	newPoint.y = y;
+	int prevPosition = 0;
+	bool intersect = false;
+	
+	//if there are no points drawn yet, draw a point and add it to the point vector
+	if(polygonPoints.size() < 1)
+	{
+		drawPoint(newPoint);
+		polygonPoints.push_back(newPoint);
+	}
+	
+	else if(polygonPoints.size() >= 1)
+	{
+		prevPosition = polygonPoints.size() -1;
+		prevPoint.x = polygonPoints[prevPosition].x;
+		prevPoint.y = polygonPoints[prevPosition].y;
+		newLine.p1 = prevPoint;
+		newLine.p2 = newPoint;
+		
+		//if(lineSegments.size() < 1)
+		//{
+			drawPoint(newPoint);
+			drawLine(newPoint, prevPoint);
+			polygonPoints.push_back(newPoint);
+			lineSegments.push_back(newLine);
+		//}
+	}
+}
 
 void clearBox()
 {
@@ -235,10 +198,6 @@ void clearBox()
 	glFlush();
 }
 
-void tesselatePolygon()
-{
-
-}
 
 
 void mouse(int button, int state, int x, int y)
@@ -246,15 +205,18 @@ void mouse(int button, int state, int x, int y)
 
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
-		drawBox(x, y);
-		//drawLines(x,WINDOW_MAX_Y-y);	
-		printf("Point Accepted: %d   %d\n", x, y);
+		if(doneDrawing==false){
+			processDraw(x, WINDOW_MAX_Y-y);
+			cout << "Size Points: " << polygonPoints.size() << " Line Points: " << lineSegments.size() << endl;
+			//printf("Point Accepted: %d   %d\n", x, y);
+		}
 	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
 		printf("%d   %d\n", x, y);
 		closePolygon();
+		doneDrawing=true;
 	}
 
 	if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
