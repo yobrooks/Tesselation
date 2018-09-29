@@ -112,7 +112,20 @@ bool lineSegIntersect(Point newPoint, int i)
         return intersect;
 }
 
-  
+void fillPolygon()
+{
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glBegin(GL_POLYGON);
+		for(int i=0; i<polygonPoints.size(); i++)
+		{
+			glVertex2d(polygonPoints[i].x, polygonPoints[i].y);
+		}
+		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
+	glEnd();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glFlush();
+	
+} 
 
 //function to connect the last point drawn to the first point drawn
 void closePolygon()
@@ -232,7 +245,6 @@ void mouse(int button, int state, int x, int y)
 	{
 		if(doneDrawing==false){
 			processDraw(x, WINDOW_MAX_Y-y);
-			cout << "Size Points: " << polygonPoints.size() << " Line Points: " << lineSegments.size() << endl;
 			//printf("Point Accepted: %d   %d\n", x, y);
 		}
 	}
@@ -243,28 +255,21 @@ void mouse(int button, int state, int x, int y)
 		closePolygon();
 		doneDrawing=true;
 	}
-
-	if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
-	{
-		printf("%d   %d\n", x, y);
-		clearBox();
-	}
 }
 
 
 void keyboard(unsigned char key, int x, int y)
 {
-/*	switch(tolower(key)){
+	switch(tolower(key)){
 
-		case q: exit(0);
-		case t: tesselate();
-			break;
-		case i: returnToInitial();
-			break;
-		case f: filledPolygon();
-			break;
-		
-	}*/
+		case 'q': exit(0);
+	//	case t: tesselate();
+	//		break;
+	//	case 'i': returnToInitial();
+	//		break;
+		case 'f': fillPolygon();
+			break;	
+	}
 }
 
 
