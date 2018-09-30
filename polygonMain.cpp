@@ -21,6 +21,10 @@ struct LineSeg{
 	Point p1, p2;
 };
 
+//struct for triangle that holds 3 points as the vertices
+struct Triangle{
+	Point vert1, vert2, vert3
+};
 
 // These are defined in a global scope
 GLubyte red, green, blue;
@@ -42,10 +46,11 @@ const float WORLD_COORDINATE_MAX_Y = 400.0;
 //boolean to keep track of when the user is done drawing points
 //when set to true they cannot draw anymore
 bool doneDrawing=false;
+
 //vector declarations
 vector<Point> polygonPoints; //vector of points to hold the points in the polygon
 vector<LineSeg> lineSegments; //vector of line segments to hold the line segments that make up the polygon
-
+vector<Triangle> tessTriangles; //vector of triangles that will be formulated during tesselation
 
 void myglutInit(int argc, char** argv)
 {
@@ -81,13 +86,13 @@ void myInit(void)
  
 //equation for scalar A and B and denominator from : http://www.faqs.org/faqs/graphics/algorithms-faq/
 template <class T>
-bool lineSegIntersect(Point newPoint, int i)
+bool lineSegIntersect(Point newPoint, Point lastPoint, int i)
 {
        //declarations
 	bool intersect;
         Point p1=lineSegments[i].p1;
         Point p2= lineSegments[i].p2;
-        Point p3=lineSegments[lineSegments.size()-1].p2;
+        Point p3=lastPoint;
         Point p4=newPoint;
 
         T denom = ((p2.x - p1.x)*((p4.y - p3.y))) - ((p2.y - p1.y)*(p4.x - p3.x));
@@ -112,6 +117,10 @@ bool lineSegIntersect(Point newPoint, int i)
         return intersect;
 }
 
+template <class T> 
+bool tesselateIntersect(LineSeg diagLine)
+{
+}
 void fillPolygon()
 {
 	glColor3f(0.0f, 0.0f, 1.0f);
@@ -122,17 +131,31 @@ void fillPolygon()
 		}
 		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
 	glEnd();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glFlush();
 	
 } 
+
+void initialOutline()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glBegin(GL_LINES);
+		for(int i=0; i < polygonPoints.size(); i++)
+		{
+			glVertex2d(polygonPoints[i].x, polygonPoints[i].y);
+		}
+		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
+	glEnd();
+	glFlush();
+}
 
 //function to connect the last point drawn to the first point drawn
 void closePolygon()
 {
 	int lastPosition=polygonPoints.size()-1;
 	glBegin(GL_LINES);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
 		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
 		glVertex2d(polygonPoints[lastPosition].x, polygonPoints[lastPosition].y);
 	glEnd();	
@@ -143,7 +166,7 @@ void closePolygon()
 void drawPoint(Point p)
 {
 	
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
 	glBegin(GL_POINTS);
 		glVertex2d(p.x, p.y);
 	glEnd();
@@ -154,7 +177,7 @@ void drawPoint(Point p)
 //draw the lines
 void drawLine(Point p, Point prevp)
 {
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
 	glBegin(GL_LINES);
 		glVertex2d(prevp.x, prevp.y);
 		glVertex2d(p.x, p.y);
@@ -212,8 +235,7 @@ void processDraw(T x, T y)
 			//if it's false at the end of the loop, draw and add points
 			for(int i=0; i < lineSegments.size(); i++)
 			{
-				//check
-				intersect = lineSegIntersect<double>(newPoint, i);
+				intersect = lineSegIntersect<double>(newPoint, lineSegments[lineSegments.size()-1], i);
 				cout << "Intersect? " << intersect << endl;
 				if(intersect == true)
 					break;
@@ -230,13 +252,79 @@ void processDraw(T x, T y)
 	}
 }
 
-void clearBox()
+
+double isCCW(Point p1, Point p2, Point p3)
 {
-	glClear(GL_COLOR_BUFFER_BIT);
-	glFlush();
+
+		Point crossP1, crossP2;
+		crossP1.x = p1.x - p2.x;
+		crossP1. y = p1.y - p2.y;
+		crossP2.x = p3.x - p2.x;
+		crossP2.y = p3.y - p2.y;
+
+		return (crossP1.x * crossP2.y) - (crossP2.x * crossP1.y);
+		
 }
 
 
+void tesselate()
+{
+	vector<Point> tempPoints = polygonPoints; //temporary vector that is a copy of the vector that holds the polygon points
+						//will be used to manipulate the point data during tesselation 
+	int counter = 0;
+	double zComp = 0;
+	bool intersect = false;
+	Triangle myTriangle;
+	while(tempPoints.size() > 3)
+	{
+		//needs to be a check somewhere to make sure counter doesn't go over tempPoints.size()
+		//if so, reset back to beginning
+	
+		//assign values and check if point is CCW
+		myTriangle.vert1 = tempPoints[counter];
+		myTriangle.vert2 = tempPoints[counter+1];
+		myTriangle.vert3 = tempPoints[counter+2];
+	
+		zComp = isCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
+	
+		//if z component of vertex is negative
+		if(zComp < 0)
+		{
+			//check for intersection 
+			for(int i=0; i < lineSegments.size(); i++)
+                        {
+                                intersect = lineSegIntersect<double>(myTriangle.vert1, myTriangle.vert3, i);
+                                if(intersect == true)
+                                        break;
+                        }
+			//if intersect
+			//if does not intersect
+			if(intersect==false)
+			{
+				tessTriangles.push_back(myTriangle); //add triangle to the triangle vector
+				drawLine(myTriangle.vert3, myTriangle.vert1); //draw diagonal line 
+				tempPoints.remove(myTriangle.vert2); //remove middle vertex from tempPoints list
+			}
+			
+			counter = 0; //set counter back to zero so it can restart at the beginning vertex 
+		}
+
+		else if (zComp > 0)
+		{
+			counter++;
+		}
+
+	}
+
+	//if there are 3 points left in the polygon
+	if(tempPoints.size() == 3)
+	{
+		myTriangle.vert1 = tempPoints[0];
+		myTriangle.vert2 = tempPoints[1];
+		myTriangle.vert3 = tempPoints[2];
+		tessTriangles.push_back(myTriangle); //add final triangle to the triangle vector
+	}
+}
 
 void mouse(int button, int state, int x, int y)
 {
@@ -251,7 +339,7 @@ void mouse(int button, int state, int x, int y)
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
-		printf("%d   %d\n", x, y);
+		//printf("%d   %d\n", x, y);
 		closePolygon();
 		doneDrawing=true;
 	}
@@ -265,7 +353,7 @@ void keyboard(unsigned char key, int x, int y)
 		case 'q': exit(0);
 	//	case t: tesselate();
 	//		break;
-	//	case 'i': returnToInitial();
+		case 'i': initialOutline();
 	//		break;
 		case 'f': fillPolygon();
 			break;	
