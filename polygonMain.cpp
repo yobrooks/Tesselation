@@ -143,7 +143,7 @@ void closePolygon()
 		glVertex2d(polygonPoints[lastPosition].x, polygonPoints[lastPosition].y);
 	glEnd();	
 	glFlush();
-	printf("Closing Polygon at Point: %d   %d\n", x, y);
+	cout << "Closing Polygon" << endl;
 }
 
 //draw the points
@@ -251,7 +251,7 @@ void processDraw(T x, T y)
 }
 
 
-double isVertexCCW(Point p1, Point p2, Point p3)
+double crossProduct(Point p1, Point p2, Point p3)
 {
 
 		Point crossP1, crossP2;
@@ -264,10 +264,19 @@ double isVertexCCW(Point p1, Point p2, Point p3)
 		
 }
 
-double isPolygonCCW()
+/*double isPolygonCCW()
 {
-
-}
+	double zComp=0;
+	Point crossP1, crossP2;
+	
+	for(int i= 0; i<polygonPoints.size(); i++)
+	{
+		zComp = (polygonPoints[i+1].x-polygonPoints[i].x)*(polygonPoints[i+1].y - polygonPoints[i].y);
+			
+	}
+	
+	return zComp;
+}*/
 
 //function to flip a polygon from CW to CCW
 vector<Point> flipPolygon()
@@ -280,12 +289,17 @@ vector<Point> flipPolygon()
 	//pop the last element from tempFlip and push it to the back of flip
 	while(tempFlip.size() > 1)
 	{
-		flip.push_back(tempFlip.pop_back());
+		flip.push_back(tempFlip.back());
+		tempFlip.pop_back();
 	}
 
 	return flip;
 }
 
+double areaTriangle()
+{
+	crossProduct
+}
 void tesselate()
 {
 	vector<Point> tempPoints = polygonPoints; //temporary vector that is a copy of the vector that holds the polygon points
@@ -300,15 +314,13 @@ void tesselate()
 	while(tempPoints.size() > 3)
 	{
 		cout << "Start Vertex: " << counter << "Points left: " << tempPoints.size() << endl;
-		//needs to be a check somewhere to make sure counter doesn't go over tempPoints.size()
-		//if so, reset back to beginning
 	
 		//assign values and check if point is CCW
 		myTriangle.vert1 = tempPoints[counter];
 		myTriangle.vert2 = tempPoints[counter+1];
 		myTriangle.vert3 = tempPoints[counter+2];
 	
-		zComp = isVertexCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
+		zComp = crossProduct(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
 	
 		//if zComp is zero
 		if(zComp==0)
@@ -373,6 +385,22 @@ void tesselate()
 	}
 }
 
+//function to fill the polygon according to the triangles formed during tesselation
+void fillTessPolygon()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.0f, 1.0f);
+
+	for(int i = 0; i < tessTriangles.size(); i++)
+	{
+		glBegin(GL_POLYGON);
+			glVertex2d(tessTriangles[i].vert1.x, tessTriangles[i].vert1.y);	
+			glVertex2d(tessTriangles[i].vert2.x, tessTriangles[i].vert2.y);
+			glVertex2d(tessTriangles[i].vert3.x, tessTriangles[i].vert3.y);
+		glEnd();
+		glFlush();	
+	}
+}
 void mouse(int button, int state, int x, int y)
 {
 
@@ -390,9 +418,10 @@ void mouse(int button, int state, int x, int y)
 	}
 }
 
-
+//function to control what happens when user presses button on keyboard
 void keyboard(unsigned char key, int x, int y)
 {
+	//switch statement detailing the different options
 	switch(tolower(key)){
 
 		case 'q': exit(0);
@@ -401,6 +430,8 @@ void keyboard(unsigned char key, int x, int y)
 		case 'i': initialOutline();
 			break;
 		case 'f': fillPolygon();
+			break;
+		case 'p': fillTessPolygon();
 			break;	
 	}
 }
