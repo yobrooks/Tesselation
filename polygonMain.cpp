@@ -23,7 +23,7 @@ struct LineSeg{
 
 //struct for triangle that holds 3 points as the vertices
 struct Triangle{
-	Point vert1, vert2, vert3
+	Point vert1, vert2, vert3;
 };
 
 // These are defined in a global scope
@@ -117,12 +117,9 @@ bool lineSegIntersect(Point newPoint, Point lastPoint, int i)
         return intersect;
 }
 
-template <class T> 
-bool tesselateIntersect(LineSeg diagLine)
-{
-}
 void fillPolygon()
 {
+	glClear(GL_COLOR_BUFFER_BIT);
 	glColor3f(0.0f, 0.0f, 1.0f);
 	glBegin(GL_POLYGON);
 		for(int i=0; i<polygonPoints.size(); i++)
@@ -235,8 +232,8 @@ void processDraw(T x, T y)
 			//if it's false at the end of the loop, draw and add points
 			for(int i=0; i < lineSegments.size(); i++)
 			{
-				intersect = lineSegIntersect<double>(newPoint, lineSegments[lineSegments.size()-1], i);
-				cout << "Intersect? " << intersect << endl;
+				intersect = lineSegIntersect<double>(newPoint, lineSegments[lineSegments.size()-1].p2, i);
+			//	cout << "Intersect? " << intersect << endl;
 				if(intersect == true)
 					break;
 			}
@@ -272,11 +269,15 @@ void tesselate()
 	vector<Point> tempPoints = polygonPoints; //temporary vector that is a copy of the vector that holds the polygon points
 						//will be used to manipulate the point data during tesselation 
 	int counter = 0;
+	int lineSegIndex = 4;
 	double zComp = 0;
 	bool intersect = false;
 	Triangle myTriangle;
+	
+	//while there are more than 3 points left in the vector
 	while(tempPoints.size() > 3)
 	{
+		cout << "Start Vertex: " << counter << "Points left: " << tempPoints.size() << endl;
 		//needs to be a check somewhere to make sure counter doesn't go over tempPoints.size()
 		//if so, reset back to beginning
 	
@@ -287,30 +288,53 @@ void tesselate()
 	
 		zComp = isCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
 	
-		//if z component of vertex is negative
-		if(zComp < 0)
+		//if zComp is zero
+		if(zComp==0)
 		{
+			tempPoints.erase(tempPoints.begin()+counter+1);
+		}
+
+		//if z component of vertex is negative
+		else if(zComp < 0)
+		{
+			lineSegIndex = lineSegIndex + counter;
+			cout << "Vertex " << counter <<" is CCW" << endl;
 			//check for intersection 
-			for(int i=0; i < lineSegments.size(); i++)
+			for(int i=lineSegIndex; i < lineSegments.size(); i++)
                         {
-                                intersect = lineSegIntersect<double>(myTriangle.vert1, myTriangle.vert3, i);
+                                intersect = lineSegIntersect<double>(myTriangle.vert3, myTriangle.vert1, i);
+				cout << "Does Vertex " << counter << " intersect?" << intersect << endl;
                                 if(intersect == true)
                                         break;
                         }
-			//if intersect
+			
+			
+			if(intersect == true)
+			{
+				counter ++;
+					
+			}
 			//if does not intersect
-			if(intersect==false)
+			else if(intersect==false)
 			{
 				tessTriangles.push_back(myTriangle); //add triangle to the triangle vector
-				drawLine(myTriangle.vert3, myTriangle.vert1); //draw diagonal line 
-				tempPoints.remove(myTriangle.vert2); //remove middle vertex from tempPoints list
+				drawLine(myTriangle.vert1, myTriangle.vert3); //draw diagonal line 
+				cout<< tempPoints.size() << " points left" <<endl;
+				tempPoints.erase(tempPoints.begin() + counter + 1); //remove middle vertex from tempPoints list
+				cout << "Reseting counter to 0" << endl;
+				counter = 0; //reseting counter back to zero so it can restart at the beginning vertex
+				lineSegIndex = 4; 
 			}
 			
+		/*	cout << "Reseting counter to 0" << endl;
 			counter = 0; //set counter back to zero so it can restart at the beginning vertex 
+			lineSegIndex = 4; */
 		}
-
+		
+		//zComp is positive
 		else if (zComp > 0)
 		{
+			cout << "zComp is positive. Incrementing counter. " << endl;
 			counter++;
 		}
 
@@ -319,6 +343,7 @@ void tesselate()
 	//if there are 3 points left in the polygon
 	if(tempPoints.size() == 3)
 	{
+		cout << "Three points left. Making final triangle" << endl;
 		myTriangle.vert1 = tempPoints[0];
 		myTriangle.vert2 = tempPoints[1];
 		myTriangle.vert3 = tempPoints[2];
@@ -351,10 +376,10 @@ void keyboard(unsigned char key, int x, int y)
 	switch(tolower(key)){
 
 		case 'q': exit(0);
-	//	case t: tesselate();
-	//		break;
+		case 't': tesselate();
+			break;
 		case 'i': initialOutline();
-	//		break;
+			break;
 		case 'f': fillPolygon();
 			break;	
 	}
