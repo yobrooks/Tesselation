@@ -128,24 +128,10 @@ void fillPolygon()
 		}
 		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
 	glEnd();
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glFlush();
 	
 } 
-
-void initialOutline()
-{
-	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glBegin(GL_LINES);
-		for(int i=0; i < polygonPoints.size(); i++)
-		{
-			glVertex2d(polygonPoints[i].x, polygonPoints[i].y);
-		}
-		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
-	glEnd();
-	glFlush();
-}
 
 //function to connect the last point drawn to the first point drawn
 void closePolygon()
@@ -157,6 +143,7 @@ void closePolygon()
 		glVertex2d(polygonPoints[lastPosition].x, polygonPoints[lastPosition].y);
 	glEnd();	
 	glFlush();
+	printf("Closing Polygon at Point: %d   %d\n", x, y);
 }
 
 //draw the points
@@ -182,6 +169,16 @@ void drawLine(Point p, Point prevp)
 	glFlush();
 }
 
+void initialOutline()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 0.0f, 1.0f);
+                for(int i=0; i < polygonPoints.size()-1; i++)
+                {
+                        drawLine(polygonPoints[i], polygonPoints[i+1]);
+                }
+	closePolygon();
+}
 //function to process what is being drawn
 //adds the points and lines and checks for intersections
 template <class T>
@@ -202,6 +199,7 @@ void processDraw(T x, T y)
 	if(polygonPoints.size() < 1)
 	{
 		drawPoint(newPoint);
+		printf("Point Accepted: %d   %d\n", x, y);
 		polygonPoints.push_back(newPoint);
 	}
 	
@@ -220,6 +218,7 @@ void processDraw(T x, T y)
 		if(lineSegments.size() < 1)
 		{
 			drawPoint(newPoint);
+			printf("Point Accepted: %d   %d\n", x, y);
 			drawLine(newPoint, prevPoint);
 			polygonPoints.push_back(newPoint);
 			lineSegments.push_back(newLine);
@@ -235,6 +234,7 @@ void processDraw(T x, T y)
 				intersect = lineSegIntersect<double>(newPoint, lineSegments[lineSegments.size()-1].p2, i);
 			//	cout << "Intersect? " << intersect << endl;
 				if(intersect == true)
+					printf("Point Not Accepted-Intersection: %d   %d\n", x, y);
 					break;
 			}
 			
@@ -242,6 +242,7 @@ void processDraw(T x, T y)
 			{
 				drawPoint(newPoint);
 				drawLine(newPoint, prevPoint);
+				printf("Point Accepted: %d   %d\n", x, y);
 				polygonPoints.push_back(newPoint);
 				lineSegments.push_back(newLine);
 			}
@@ -250,7 +251,7 @@ void processDraw(T x, T y)
 }
 
 
-double isCCW(Point p1, Point p2, Point p3)
+double isVertexCCW(Point p1, Point p2, Point p3)
 {
 
 		Point crossP1, crossP2;
@@ -263,6 +264,27 @@ double isCCW(Point p1, Point p2, Point p3)
 		
 }
 
+double isPolygonCCW()
+{
+
+}
+
+//function to flip a polygon from CW to CCW
+vector<Point> flipPolygon()
+{
+	vector<Point> tempFlip = polygonPoints;
+	vector<Point> flip;
+	flip.push_back(tempFlip[0]);
+	
+	//until tempFlip has only the first element remaining
+	//pop the last element from tempFlip and push it to the back of flip
+	while(tempFlip.size() > 1)
+	{
+		flip.push_back(tempFlip.pop_back());
+	}
+
+	return flip;
+}
 
 void tesselate()
 {
@@ -286,7 +308,7 @@ void tesselate()
 		myTriangle.vert2 = tempPoints[counter+1];
 		myTriangle.vert3 = tempPoints[counter+2];
 	
-		zComp = isCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
+		zComp = isVertexCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
 	
 		//if zComp is zero
 		if(zComp==0)
@@ -358,13 +380,11 @@ void mouse(int button, int state, int x, int y)
 	{
 		if(doneDrawing==false){
 			processDraw(x, WINDOW_MAX_Y-y);
-			//printf("Point Accepted: %d   %d\n", x, y);
 		}
 	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{
-		//printf("%d   %d\n", x, y);
 		closePolygon();
 		doneDrawing=true;
 	}
