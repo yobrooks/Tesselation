@@ -128,7 +128,7 @@ void fillPolygon()
 		}
 		glVertex2d(polygonPoints[0].x, polygonPoints[0].y);
 	glEnd();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glFlush();
 	
 } 
@@ -232,7 +232,6 @@ void processDraw(T x, T y)
 			for(int i=0; i < lineSegments.size(); i++)
 			{
 				intersect = lineSegIntersect<double>(newPoint, lineSegments[lineSegments.size()-1].p2, i);
-			//	cout << "Intersect? " << intersect << endl;
 				if(intersect == true)
 					printf("Point Not Accepted-Intersection: %d   %d\n", x, y);
 					break;
@@ -251,7 +250,7 @@ void processDraw(T x, T y)
 }
 
 
-double crossProduct(Point p1, Point p2, Point p3)
+double isVertexCCW(Point p1, Point p2, Point p3)
 {
 
 		Point crossP1, crossP2;
@@ -264,30 +263,40 @@ double crossProduct(Point p1, Point p2, Point p3)
 		
 }
 
-/*double isPolygonCCW()
+//function to determine if a polygon is clockwise or counterclockwise
+bool isPolygonCCW()
 {
-	double zComp=0;
+	bool isCCW;
+	double result=0;
 	Point crossP1, crossP2;
 	
-	for(int i= 0; i<polygonPoints.size(); i++)
+	for(int i= 0; i<polygonPoints.size()-1; i++)
 	{
-		zComp = (polygonPoints[i+1].x-polygonPoints[i].x)*(polygonPoints[i+1].y - polygonPoints[i].y);
-			
+		result = result + (polygonPoints[i+1].x-polygonPoints[i].x)*(polygonPoints[i+1].y + polygonPoints[i].y);	
 	}
 	
-	return zComp;
-}*/
+	result = result + (polygonPoints[0].x - polygonPoints[polygonPoints.size()-1].x) * (polygonPoints[0].y + polygonPoints[polygonPoints.size()-1].y);
+//	cout << "RESULT OF POLYGON CCW FUNCTION: " << result;
+	if(result < 0){
+		isCCW = true;
+	}
+	else{
+		isCCW = false;
+	}
+	
+	return isCCW;
+}
 
 //function to flip a polygon from CW to CCW
 vector<Point> flipPolygon()
 {
 	vector<Point> tempFlip = polygonPoints;
 	vector<Point> flip;
-	flip.push_back(tempFlip[0]);
+	flip.push_back(tempFlip.front());
 	
 	//until tempFlip has only the first element remaining
 	//pop the last element from tempFlip and push it to the back of flip
-	while(tempFlip.size() > 1)
+	while(tempFlip.size() != 1)
 	{
 		flip.push_back(tempFlip.back());
 		tempFlip.pop_back();
@@ -296,20 +305,30 @@ vector<Point> flipPolygon()
 	return flip;
 }
 
-double areaTriangle()
+double areaTriangle(Triangle t)
 {
-	crossProduct
+	return ((t.vert1.x*t.vert2.y) + (t.vert2.x * t.vert3.y) + (t.vert3.x * t.vert1.y) - (t.vert1.x * t.vert3.y) - (t.vert2.x * t.vert1.y) - (t.vert3.x *t.vert2.y)) * 0.5; 		
 }
 void tesselate()
 {
-	vector<Point> tempPoints = polygonPoints; //temporary vector that is a copy of the vector that holds the polygon points
+	vector<Point> tempPoints; //temporary vector that is a copy of the vector that holds the polygon points
 						//will be used to manipulate the point data during tesselation 
 	int counter = 0;
 	int lineSegIndex = 4;
 	double zComp = 0;
+	int numTriangles = 0;
 	bool intersect = false;
 	Triangle myTriangle;
 	
+	if(!isPolygonCCW())
+	{
+		cout << "Polygon is not CCW" << endl;
+		tempPoints = flipPolygon();
+	}
+	else{
+		cout << "Polygon is CCW " << endl;
+		tempPoints = polygonPoints;
+	}
 	//while there are more than 3 points left in the vector
 	while(tempPoints.size() > 3)
 	{
@@ -320,7 +339,7 @@ void tesselate()
 		myTriangle.vert2 = tempPoints[counter+1];
 		myTriangle.vert3 = tempPoints[counter+2];
 	
-		zComp = crossProduct(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
+		zComp = isVertexCCW(myTriangle.vert1, myTriangle.vert2, myTriangle.vert3);
 	
 		//if zComp is zero
 		if(zComp==0)
@@ -352,17 +371,15 @@ void tesselate()
 			else if(intersect==false)
 			{
 				tessTriangles.push_back(myTriangle); //add triangle to the triangle vector
-				drawLine(myTriangle.vert1, myTriangle.vert3); //draw diagonal line 
+				drawLine(myTriangle.vert1, myTriangle.vert3); //draw diagonal line
+				numTriangles ++;
+				cout <<  "Area of Triangle " << numTriangles << ": " << areaTriangle(myTriangle) << endl;
 				cout<< tempPoints.size() << " points left" <<endl;
 				tempPoints.erase(tempPoints.begin() + counter + 1); //remove middle vertex from tempPoints list
 				cout << "Reseting counter to 0" << endl;
 				counter = 0; //reseting counter back to zero so it can restart at the beginning vertex
 				lineSegIndex = 4; 
-			}
-			
-		/*	cout << "Reseting counter to 0" << endl;
-			counter = 0; //set counter back to zero so it can restart at the beginning vertex 
-			lineSegIndex = 4; */
+			}	
 		}
 		
 		//zComp is positive
@@ -371,16 +388,17 @@ void tesselate()
 			cout << "zComp is positive. Incrementing counter. " << endl;
 			counter++;
 		}
-
 	}
 
 	//if there are 3 points left in the polygon
 	if(tempPoints.size() == 3)
 	{
+		numTriangles++;
 		cout << "Three points left. Making final triangle" << endl;
 		myTriangle.vert1 = tempPoints[0];
 		myTriangle.vert2 = tempPoints[1];
 		myTriangle.vert3 = tempPoints[2];
+		cout <<  "Area of Triangle " << numTriangles << ": " << areaTriangle(myTriangle) << endl;
 		tessTriangles.push_back(myTriangle); //add final triangle to the triangle vector
 	}
 }
@@ -404,6 +422,7 @@ void fillTessPolygon()
 void mouse(int button, int state, int x, int y)
 {
 
+	//glClear(GL_COLOR_BUFFER_BIT);
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 	{
 		if(doneDrawing==false){
